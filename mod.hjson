@@ -3,6 +3,6 @@ displayName: Gemini Translator
 author: Zeefoe
 description: Translates the chat using Gemini(yes it's free)
 version: "1.0"
-minGameVersion: "147" // Or your targeted Mindustry version
-main: "geminitranslator.ChatTranslator" // Fully qualified name of your main plugin class
-java: true // Indicate that this is a Java mod
+minGameVersion: "147"
+main: "geminitranslator.ChatTranslator"
+java: true
