@@ -65,13 +65,13 @@ public class ChatTranslator extends Plugin {
             String playerName = player.name();
 
             if (geminiClient != null && translationConfig != null) {
-                translateMessage(playerName, originalMessage);
+                translateMessage(playerName, event.player, originalMessage);
             }
         });
 
     }
 
-    private void translateMessage(String playerName, String messageToTranslate) {
+    private void translateMessage(String playerName, Player player, String messageToTranslate) {
         try {
             geminiClient.async.models.generateContent(MODEL_NAME, messageToTranslate, translationConfig)
                 .thenAccept(response -> {
@@ -81,7 +81,7 @@ public class ChatTranslator extends Plugin {
                     } else if (geminiResponseText.isEmpty()) {
                     }
                     else {
-                        Vars.player.sendMessage("[[" + playerName + "[white]] " + geminiResponseText);
+                        Vars.player.sendMessage("tr - [[[#" + player.color().toString().substring(0, 6) + "]" + playerName + "[white]] " + geminiResponseText);
                     }
                 })
                 .exceptionally(ex -> {
