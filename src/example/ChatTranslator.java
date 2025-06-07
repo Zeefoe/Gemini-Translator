@@ -26,6 +26,7 @@ public class ChatTranslator extends Plugin {
         "1. If the input text is already in English, your entire response MUST be the exact string 'ENGLISH_INPUT_SKIP'. Do not add any other text or explanation.\n" +
         "2. If the input text is NOT in English, translate it to English. Your response MUST be ONLY the English translation, followed by a space, and then the detected ISO 639-1 language code of the original input text enclosed in square brackets (e.g., 'Translated text [fr]').\n" +
         "3. Do not include any pleasantries, apologies, or any text other than the direct translation + language code, or 'ENGLISH_INPUT_SKIP'.\n" +
+        "4. Do not try to translate typos, slangs or grammar issues just say 'ENGLISH_INPUT_SKIP'.\n" +
         "Example for non-English input 'Bonjour le monde': Hello world [fr]\n" +
         "Example for English input 'Hello world': ENGLISH_INPUT_SKIP";
 
