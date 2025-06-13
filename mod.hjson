@@ -6,3 +6,4 @@ version: "1.0"
 minGameVersion: "147"
 main: "geminitranslator.ChatTranslator"
 java: true
+hidden: true
