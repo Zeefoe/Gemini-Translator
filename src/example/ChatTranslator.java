@@ -4,6 +4,7 @@ import arc.Core;
 import arc.Events;
 import arc.scene.style.TextureRegionDrawable;
 import arc.util.Log;
+import arc.util.Time;
 import mindustry.Vars;
 import mindustry.game.EventType.PlayerChatEvent;
 import mindustry.gen.Player;
@@ -24,13 +25,14 @@ public class ChatTranslator extends Mod {
     private GenerateContentConfig translationConfig;
 
     private static final float FIXED_TEMPERATURE = 0.4f;
+    private static final int MAX_RETRIES = 3;
 
     @Override
     public void init() {
         Vars.ui.settings.addCategory(bundle.get("gemini.settings.title"), new TextureRegionDrawable(Core.atlas.find("gemini-translator-frog")), table -> {
             table.checkPref("gemini-translator-enabled", true);
             table.areaTextPref("gemini-api-key", "", s -> loadClient());
-            table.textPref("gemini-model-name", "gemini-2.0-flash", s -> loadClient()); //https://ai.google.dev/gemini-api/docs/models
+            table.textPref("gemini-model-name", "gemini-2.0-flash-lite", s -> loadClient()); // https://ai.google.dev/gemini-api/docs/models
         });
 
         loadClient();
@@ -88,39 +90,42 @@ public class ChatTranslator extends Mod {
     private void translateMessage(Player player, String messageToTranslate) {
         try {
             String modelName = Core.settings.getString("gemini-model-name", "gemini-2.0-flash");
-
-            geminiClient.async.models.generateContent(modelName, messageToTranslate, translationConfig)
-                    .thenAccept(response -> {
-                        String geminiResponseText = response.text().trim();
-
-                        if (!"INPUT_SKIP".equalsIgnoreCase(geminiResponseText) && !geminiResponseText.isEmpty()) {
-                            String coloredPlayerName = "[#" + player.color().toString().substring(0, 6) + "]" + player.name() + "[]";
-                            Vars.player.sendMessage("[#b5b5b5]tr - [white][[" + coloredPlayerName + "[white]]: " + geminiResponseText);
-                        }
-                    })
-                    .exceptionally(ex -> {
-                        Log.err("[GeminiTranslator] API error during translation for message: \"" + messageToTranslate + "\"", ex);
-                        if (Vars.player != null) {
-                             Vars.player.sendMessage("[scarlet]Gemini Translator: API error during translation. Check if API key is valid or has access to the models.");
-                        }
-                        return null;
-                    });
+            translateWithRetries(player, messageToTranslate, modelName, 1);
         } catch (Exception e) {
-            Log.err("[GeminiTranslator] Unexpected error when starting translation request for message: \"" + messageToTranslate + "\"", e);
+            Log.err("[GeminiTranslator] Unexpected synchronous error when starting translation request for message: \"" + messageToTranslate + "\"", e);
             if (Vars.player != null) {
                 Vars.player.sendMessage("[scarlet]Gemini Translator: Unexpected error.");
             }
         }
     }
 
+    private void translateWithRetries(Player player, String messageToTranslate, String modelName, int attemptNumber) {
+        geminiClient.async.models.generateContent(modelName, messageToTranslate, translationConfig)
+                .thenAccept(response -> {
+                    String geminiResponseText = response.text().trim();
+                    if (!"INPUT_SKIP".equalsIgnoreCase(geminiResponseText) && !geminiResponseText.isEmpty()) {
+                        String coloredPlayerName = "[#" + player.color().toString().substring(0, 6) + "]" + player.name() + "[]";
+                        Vars.player.sendMessage("[#b5b5b5]tr - [white][[" + coloredPlayerName + "[white]]: " + geminiResponseText);
+                    }
+                })
+                .exceptionally(ex -> {
+                    if (attemptNumber < MAX_RETRIES) {
+                        Log.warn("[GeminiTranslator] API call failed on attempt " + (attemptNumber + 1) + ". Retrying in 1 second...");
+                        Time.runTask(1f, () -> {
+                            translateWithRetries(player, messageToTranslate, modelName, attemptNumber + 1);
+                        });
+                    } else {
+                        Log.err("[GeminiTranslator] API error after " + MAX_RETRIES + " attempts for message: \"" + messageToTranslate + "\"", ex);
+                        if (Vars.player != null) {
+                             Vars.player.sendMessage("[scarlet]Gemini Translator: API error after multiple retries. Check API key/settings.");
+                        }
+                    }
+                    return null;
+                });
+    }
+
     private String getDefaultInstruction() {
-        return "You are a highly specialized translation AI. Your sole task is to translate the user's input text into English.\n" +
-               "Your response MUST follow these rules strictly:\n" +
-               "1. If the input text is already in English, your entire response MUST be the exact string 'INPUT_SKIP'. Do not add any other text or explanation.\n" +
-               "2. If the input text is NOT in English, translate it to English. Your response MUST be ONLY the English translation, followed by a space, and then the detected ISO 639-1 language code of the original input text enclosed in square brackets (e.g., 'Translated text [fr]').\n" +
-               "3. Do not include any pleasantries, apologies, or any text other than the direct translation + language code, or 'INPUT_SKIP'.\n" +
-               "4. Do not try to translate(if it is in the target language) typos, slangs, or grammar issues just say 'INPUT_SKIP'.\n" +
-               "Example for non-English input 'Bonjour le monde': Hello world [fr]\n" +
-               "Example for English input 'Hello world': INPUT_SKIP";
+        // for auto setting target language later
+        return bundle.get("gemini.system.instruction");
     }
 }
