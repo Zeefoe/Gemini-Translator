@@ -115,12 +115,22 @@ public class ChatTranslator extends Mod {
 
     private void translateWithRetries(Player player, String messageToTranslate, String modelName, int attemptNumber) {
         geminiClient.async.models.generateContent(modelName, messageToTranslate, translationConfig)
-                .thenAccept(response -> {
-                    String geminiResponseText = response.text().trim();
-                    if (!"INPUT_SKIP".equalsIgnoreCase(geminiResponseText) && !geminiResponseText.isEmpty()) {
-                        String coloredPlayerName = "[#" + player.color().toString().substring(0, 6) + "]" + player.name() + "[]";
-                        Vars.player.sendMessage("[#b5b5b5]tr - [white][[" + coloredPlayerName + "[white]]: " + geminiResponseText);
+        .thenAccept(response -> {
+                    String geminiResponseText = response.text();
+
+                    if (geminiResponseText == null) {
+                        Log.warn("[GeminiTranslator] Received a null text response from API. Skipping message.");
+                        return;
                     }
+
+                    String trimmedText = geminiResponseText.trim();
+
+                    if (trimmedText.isEmpty() || "INPUT_SKIP".equalsIgnoreCase(trimmedText)) {
+                        return;
+                    }
+
+                    String coloredPlayerName = "[#" + player.color().toString().substring(0, 6) + "]" + player.name() + "[]";
+                    Vars.player.sendMessage("[#b5b5b5]tr - [white][[" + coloredPlayerName + "[white]]: " + trimmedText);
                 })
                 .exceptionally(ex -> {
                     if (attemptNumber < MAX_RETRIES) {
