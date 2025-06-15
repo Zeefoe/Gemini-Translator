@@ -6,7 +6,7 @@ import arc.scene.style.TextureRegionDrawable;
 import arc.util.Log;
 import arc.util.Time;
 import mindustry.Vars;
-import mindustry.game.EventType.PlayerChatEvent;
+import mindustry.game.EventType;
 import mindustry.gen.Player;
 import mindustry.mod.Mod;
 import mindustry.ui.dialogs.SettingsMenuDialog;
@@ -33,11 +33,25 @@ public class ChatTranslator extends Mod {
             table.checkPref("gemini-translator-enabled", true);
             table.areaTextPref("gemini-api-key", "", s -> loadClient());
             table.textPref("gemini-model-name", "gemini-2.0-flash-lite", s -> loadClient()); // https://ai.google.dev/gemini-api/docs/models
+            table.row(); // will do for now
+            table.button(bundle.get("gemini.settings.getapikey"), () -> {
+                Core.app.openURI("https://aistudio.google.com/apikey");
+            }).width(180f).pad(6f);
         });
 
         loadClient();
 
-        Events.on(PlayerChatEvent.class, event -> {
+        Events.on(EventType.PlayerJoin.class, event -> {
+            if (Core.settings.getBool("gemini-translator-enabled", true) &&
+                Core.settings.getString("gemini-api-key", "").isEmpty()) {
+
+                if (Vars.player != null) {
+                    Vars.player.sendMessage(bundle.get("gemini.warning.noapikey"));
+                }
+            }
+        });
+
+        Events.on(EventType.PlayerChatEvent.class, event -> {
             if (!Core.settings.getBool("gemini-translator-enabled", true)) {
                 return;
             }
@@ -110,14 +124,14 @@ public class ChatTranslator extends Mod {
                 })
                 .exceptionally(ex -> {
                     if (attemptNumber < MAX_RETRIES) {
-                        Log.warn("[GeminiTranslator] API call failed on attempt " + (attemptNumber + 1) + ". Retrying in 1 second...");
+                        Log.warn("[GeminiTranslator] API call failed on attempt " + attemptNumber + ". Retrying in 1 second...");
                         Time.runTask(1f, () -> {
                             translateWithRetries(player, messageToTranslate, modelName, attemptNumber + 1);
                         });
                     } else {
                         Log.err("[GeminiTranslator] API error after " + MAX_RETRIES + " attempts for message: \"" + messageToTranslate + "\"", ex);
                         if (Vars.player != null) {
-                             Vars.player.sendMessage("[scarlet]Gemini Translator: API error after multiple retries. Check API key/settings.");
+                             Vars.player.sendMessage("[scarlet]Gemini Translator: API error after multiple retries. Check if API key is valid or has access to the models.");
                         }
                     }
                     return null;
@@ -125,7 +139,6 @@ public class ChatTranslator extends Mod {
     }
 
     private String getDefaultInstruction() {
-        // for auto setting target language later
         return bundle.get("gemini.system.instruction");
     }
 }
