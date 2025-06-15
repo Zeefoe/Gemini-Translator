@@ -41,7 +41,7 @@ public class ChatTranslator extends Mod {
 
         loadClient();
 
-        Events.on(EventType.PlayerJoin.class, event -> {
+        Events.on(EventType.WorldLoadEvent.class, event -> {
             if (Core.settings.getBool("gemini-translator-enabled", true) &&
                 Core.settings.getString("gemini-api-key", "").isEmpty()) {
 
