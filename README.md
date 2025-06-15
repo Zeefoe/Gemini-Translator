@@ -6,5 +6,6 @@ go to [Google AI Studio](https://aistudio.google.com/app/apikey) to get an api k
 
 
 ## TODO
-*   make the api key customizable ingame
+*   ~~make the api key customizable ingame~~ ✅
+*   new logo and icons
 *   make the target languange customizable(also ingame)

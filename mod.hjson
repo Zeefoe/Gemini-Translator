@@ -1,7 +1,17 @@
 name: gemini-translator
 displayName: Gemini Translator
 author: Zeefoe
-description: Translates the chat using Gemini(yes it's free)
+description: "Translates the chat using the Gemini API
+
+It's free
+
+You can get an api key here:
+https://aistudio.google.com/apikey
+ 
+ 
+ 
+ 
+icons will be added soon"
 version: "1.0"
 minGameVersion: "147"
 main: "geminitranslator.ChatTranslator"
